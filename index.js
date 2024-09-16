@@ -1,28 +1,53 @@
 const puppeteer = require("puppeteer");
+const yargs = require("yargs");
 
 function sleep(time) {
-  return new Promise((res, rej) => {
-    setTimeout(res, time);
-  });
+  return new Promise((res) => setTimeout(res, time));
 }
 
-(async () => {
-  console.log("asdasd");
+async function runBrowser(url, upperLimit) {
+  console.log("Starting browser...");
   const browser = await puppeteer.launch({ headless: false });
-  const upperLimit = 30;
   let count = 0;
+
   while (true) {
     if (count < upperLimit) {
-      let context = await browser.createIncognitoBrowserContext();
+      let context = await browser.createBrowserContext();
       let page = await context.newPage();
-
-      await page.goto(
-        "https://spectra.queue-it.net/?c=spectra&e=ucla20230922&t=https%3A%2F%2Fucla.evenue.net%2Fsignin%3Fui%3DSH%26continue%3Dhttps%253A%252F%252Fucla.evenue.net%252Fcgi-bin%252Fncommerce3%252FSEGetGroupList%253FgroupCode%253DGS-MULTI%2526linkID%253Ducla-multi%2526shopperContext%253D%2526caller%253D%2526appCode%253D%2526addrReq%253D%2526phoneReq%253D%2526RSRC%253D%2526RDAT%253D%2526linkSource%253D%2526shopperContext%253D"
-      );
+      await page.goto(url);
       await page.bringToFront();
       count += 1;
+      console.log(`Opened page ${count} of ${upperLimit}`);
     } else {
       await sleep(3000);
     }
   }
-})();
+}
+
+yargs
+  .command(
+    "$0 <url>",
+    "Open multiple incognito browser windows",
+    (yargs) => {
+      yargs
+        .positional("url", {
+          describe: "URL to open in browser windows",
+          type: "string",
+        })
+        .option("limit", {
+          alias: "l",
+          describe: "Upper limit of browser windows",
+          type: "number",
+          default: 30,
+        });
+    },
+    async (argv) => {
+      try {
+        await runBrowser(argv.url, argv.limit);
+      } catch (error) {
+        console.error("An error occurred:", error);
+        process.exit(1);
+      }
+    }
+  )
+  .help().argv;
